@@ -83,21 +83,28 @@ int main(int argc, char **argv) {
 
         printf("\n\n");
 
+        /* Solo para debug, eliminar después */
         // ETQ
         printf("ETQ : ");
-        for (int i = 0; i < 5; i++)
+        for (int i = 0; i < TAM_ETQ; i++)
             printf("%d", binario[i]);
         printf("\n");
         // Linea
         printf("Linea : ");
-        for (int i = 5; i < 8; i++)
+        for (int i = TAM_ETQ; i < TAM_LINEA; i++)
             printf("%d", binario[i]);
         printf("\n");
         // Palabra
         printf("Palabra : ");
-        for (int i = 8; i < 12; i++)
+        for (int i = TAM_LINEA; i < 12; i++)
             printf("%d", binario[i]);
         printf("\n");
+        /* ------------------------------ */
+
+        // TODO Calcular numero de línea y comprobar si ETQ es igual en la caché
+        for (int i = 0; i < TAM_ETQ; i++)
+            if (binario[i] == 1)
+                printf("%d", (TAM_ETQ - 1) - i);
 
         printf("\n");
         sleep(1);
