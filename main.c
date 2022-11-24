@@ -59,8 +59,6 @@ int main(int argc, char **argv) {
     if (file == NULL)
         return -1;
 
-    int *binario = (int *)malloc(sizeof(int) * 12);
-
     // *** MAIN LOOP - Mientras hay direcciones que leer ***
     while (getline(&line, &len, file) != -1) {
         unsigned int addr = 0;
@@ -70,46 +68,23 @@ int main(int argc, char **argv) {
         sscanf(line, "%x", &addr);  // Convierte char* a int
         ParsearDireccion(addr, &etq, &palabra, &linea, &bloque);
 
-        printf("Dirección : %X", addr);
+        printf("Dirección : %X\n\n", addr);
 
         printf("ETQ : %X\n", etq);
         printf("Linea : %X\n", linea);
-        printf("Palbra : %X\n", palabra);
+        printf("Palabra : %X\n", palabra);
 
-        // int etq = binaryToDecimal(binario, TAM_ETQ);               // Convierte ETQ en decimal
-        // int bloque = binaryToDecimal(bloqueArray, TAM_MARCO);      // Convierte bloque en decimal
-        // int palabra = binaryToDecimal(palabraArray, TAM_PALABRA);  // Convierte palabra en decimal
+        int indexLinea = linea % NUM_LINEAS;  // Obtiene la línea en que buscar en la caché
 
-        // int direccionDecimal = binaryToDecimal(binario, TAM_ETQ + TAM_MARCO + TAM_PALABRA);  // Convierte la dirección de hexadecimal a decimal
-        // int indexLinea = bloque % NUM_LINEAS;                                                // Obtiene la línea en que buscar en la caché
+        printf("\nBuscar en línea : %d\n", indexLinea);
+        printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
 
-        // // ETQ
-        // printf("\nETQ : ");
-        // for (int i = 0; i < TAM_ETQ; i++)
-        //     printf("%d", binario[i]);
-        // printf(" - 0x%X\n", etq);
-
-        // // Linea
-        // printf("Linea : ");
-        // for (int i = TAM_ETQ; i < TAM_ETQ + TAM_MARCO; i++)
-        //     printf("%d", binario[i]);
-        // printf(" - 0x%X\n", bloque);
-
-        // // Palabra
-        // printf("Palabra : ");
-        // for (int i = TAM_ETQ + TAM_MARCO; i < TAM_BUS; i++)
-        //     printf("%d", binario[i]);
-        // printf(" - 0x%X\n", palabra);
-
-        // printf("\nBuscar en línea : %d\n", indexLinea);
-        // printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
-
-        // if (tbl[indexLinea].ETQ == etq)
-        //     printf("“T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X”\n", timer, etq, tbl[indexLinea].ETQ, bloque, palabra, 0);
-        // else {
-        //     printf("“T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X”,\n", timer, numfallos, direccionDecimal, etq, bloque, palabra, Simul_RAM[bloque]);
-        //     TratarFallo(tbl, Simul_RAM, etq, bloque, bloque);
-        // }
+        if (tbl[indexLinea].ETQ == etq)
+            printf("“T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X”\n", timer, etq, tbl[indexLinea].ETQ, bloque, palabra, 0);
+        else {
+            printf("“T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X”,\n", timer, numfallos, addr, etq, bloque, palabra, Simul_RAM[bloque]);
+            TratarFallo(tbl, Simul_RAM, etq, bloque, bloque);
+        }
 
         printf("\n");
         timer++;
@@ -122,7 +97,6 @@ int main(int argc, char **argv) {
 
     fclose(file);
     free(line);
-    free(binario);
     printf("\n");
 
     return 0;
