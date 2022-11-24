@@ -1,4 +1,3 @@
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -83,7 +82,7 @@ int main(int argc, char **argv) {
             printf("“T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X”\n", timer, etq, tbl[indexLinea].ETQ, bloque, palabra, 0);
         else {
             printf("“T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X”,\n", timer, numfallos, addr, etq, bloque, palabra, Simul_RAM[bloque]);
-            TratarFallo(tbl, Simul_RAM, etq, bloque, bloque);
+            TratarFallo(tbl, Simul_RAM, etq, linea, bloque);
         }
 
         printf("\n");
@@ -133,8 +132,11 @@ void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque) 
     globaltime += 10;
 
     printf("RAM : %X\n", MRAM[256 * linea % NUM_LINEAS]);
+
+    // TODO Copiar contenido de RAM a cache
 }
 
+// Convierte de binario a decimal
 int binaryToDecimal(int *binario, int size) {
     int exp = 0, decimal = 0;
 
