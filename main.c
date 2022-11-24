@@ -1,16 +1,19 @@
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#define TAM_PALABRA 4
-#define TAM_LINEA 8
-#define TAM_ETQ 5
+#define TAM_PALABRA 4  // w
+#define TAM_MARCO 3    // r
+#define TAM_ETQ 5      // ETQ
 
-// numfilas 4
-// maxline 100
-// tamlinea 8
-// lram 1024
+#define TAM_LINEA 16
+#define TAM_BUS 12
+#define NUM_LINEAS 8
+
+#define TAM_RAM 4096   // 2^12
+#define TAM_CACHE 128  // 2^7
 
 typedef struct Cache {
     unsigned char ETQ;
@@ -20,26 +23,26 @@ typedef struct Cache {
 int globaltime = 0;
 int numfallos = 0;
 
-void init(T_CACHE_LINE *tbl, int size);
-// void LimpiarCACHE(T_CACHE_LINE tbl[NUM_FILAS]);
+void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS]);
 void VolcarCACHE(T_CACHE_LINE *tbl);
 void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque);
 void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque);
 
-int *convertToBinary(char *line, int index);
+int *convertToBinary(char *line);
+int binaryToDecimal(int *binario, int size);
 
 int main(int argc, char **argv) {
-    printf("\n");
-    int numLineas = 0;
+    int timer = 1;
     FILE *file;
 
-    T_CACHE_LINE tbl[8];
-    unsigned char Simul_RAM[4096];
+    T_CACHE_LINE tbl[NUM_LINEAS];
+    unsigned char Simul_RAM[TAM_RAM];
 
-    init(tbl, sizeof(tbl) / sizeof(tbl[0]));  // Asigna valores iniciales a la caché
+    //  *** EMPIEZA EL PROCESO ***
+    LimpiarCACHE(tbl);
     printf("\n");
 
-    /* Lee fichero binario */
+    // *** PRIMERO LEE FICHERO "CONTENTS_RAM.bin" ***
     file = fopen("CONTENTS_RAM.bin", "rb");
     if (!file) {
         printf("Fallo al leer fichero\n");
@@ -48,94 +51,135 @@ int main(int argc, char **argv) {
     fread(Simul_RAM, 1, sizeof(Simul_RAM), file);
     fclose(file);
 
-    // for (int i = 0; i < sizeof(Simul_RAM); i++)
-    //     printf("%u ", Simul_RAM[i]);  // prints a series of bytes
-
+    // *** LEE FICHERO "accesos_memoria.txt" ***
     char *line = NULL;
     size_t len = 0;
 
-    int i = 0;
-
-    /* Lee fichero accesos_memoria.txt */
     file = fopen("accesos_memoria.txt", "r");
     if (file == NULL)
         return -1;
 
-    char **datos = NULL;
-
     int *binario = (int *)malloc(sizeof(int) * 12);
-    int index = 0;
 
-    // Main loop
+    // *** MAIN LOOP - Mientras hay direcciones que leer ***
     while (getline(&line, &len, file) != -1) {
-        printf(" ------------------- \n");
-        printf("Hex : %s", line);
-        // printf("Hex : ");
-        // for (int i = 0; i < 3; i++)
-        //     printf("%c", line[i]);
-        binario = convertToBinary(line, index++);  // Array con valor binario de linea
-        printf("Bin : ");
-        for (int i = 0; i < 12; i++) {
-            if (i == 4 || i == 8)
-                printf(" ");
-            printf("%d", binario[i]);
-        }
+        unsigned int addr = 0;
+        int etq = 0, linea = 0, palabra = 0, bloque = 0;
 
-        printf("\n\n");
+        // binario = convertToBinary(line);  // Convierte la dirección en un array de numeros binarios
+        sscanf(line, "%x", &addr);  // Convierte char* a int
+        ParsearDireccion(addr, &etq, &palabra, &linea, &bloque);
 
-        /* Solo para debug, eliminar después */
-        // ETQ
-        printf("ETQ : ");
-        for (int i = 0; i < TAM_ETQ; i++)
-            printf("%d", binario[i]);
-        printf("\n");
-        // Linea
-        printf("Linea : ");
-        for (int i = TAM_ETQ; i < TAM_LINEA; i++)
-            printf("%d", binario[i]);
-        printf("\n");
-        // Palabra
-        printf("Palabra : ");
-        for (int i = TAM_LINEA; i < 12; i++)
-            printf("%d", binario[i]);
-        printf("\n");
-        /* ------------------------------ */
+        printf("Dirección : %X", addr);
 
-        // TODO Calcular numero de línea y comprobar si ETQ es igual en la caché
-        for (int i = 0; i < TAM_ETQ; i++)
-            if (binario[i] == 1)
-                printf("%d", (TAM_ETQ - 1) - i);
+        printf("ETQ : %X\n", etq);
+        printf("Linea : %X\n", linea);
+        printf("Palbra : %X\n", palabra);
+
+        // int etq = binaryToDecimal(binario, TAM_ETQ);               // Convierte ETQ en decimal
+        // int bloque = binaryToDecimal(bloqueArray, TAM_MARCO);      // Convierte bloque en decimal
+        // int palabra = binaryToDecimal(palabraArray, TAM_PALABRA);  // Convierte palabra en decimal
+
+        // int direccionDecimal = binaryToDecimal(binario, TAM_ETQ + TAM_MARCO + TAM_PALABRA);  // Convierte la dirección de hexadecimal a decimal
+        // int indexLinea = bloque % NUM_LINEAS;                                                // Obtiene la línea en que buscar en la caché
+
+        // // ETQ
+        // printf("\nETQ : ");
+        // for (int i = 0; i < TAM_ETQ; i++)
+        //     printf("%d", binario[i]);
+        // printf(" - 0x%X\n", etq);
+
+        // // Linea
+        // printf("Linea : ");
+        // for (int i = TAM_ETQ; i < TAM_ETQ + TAM_MARCO; i++)
+        //     printf("%d", binario[i]);
+        // printf(" - 0x%X\n", bloque);
+
+        // // Palabra
+        // printf("Palabra : ");
+        // for (int i = TAM_ETQ + TAM_MARCO; i < TAM_BUS; i++)
+        //     printf("%d", binario[i]);
+        // printf(" - 0x%X\n", palabra);
+
+        // printf("\nBuscar en línea : %d\n", indexLinea);
+        // printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
+
+        // if (tbl[indexLinea].ETQ == etq)
+        //     printf("“T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X”\n", timer, etq, tbl[indexLinea].ETQ, bloque, palabra, 0);
+        // else {
+        //     printf("“T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X”,\n", timer, numfallos, direccionDecimal, etq, bloque, palabra, Simul_RAM[bloque]);
+        //     TratarFallo(tbl, Simul_RAM, etq, bloque, bloque);
+        // }
 
         printf("\n");
+        timer++;
         sleep(1);
     }
 
+    // *** TERMINA BUCLE ***
+    printf("Accesos totales : %d; fallos : %d; Tiempo medio : %d\n", 0, numfallos, 0);
+    printf("Texto leído : \n");
+
     fclose(file);
     free(line);
-    free(datos);
+    free(binario);
     printf("\n");
 
     return 0;
 }
 
-// Arranque proceso
-void init(T_CACHE_LINE *tbl, int size) {
-    for (int i = 0; i < size; i++) {
+void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS]) {
+    for (int i = 0; i < NUM_LINEAS; i++) {
         tbl[i].ETQ = 0xFF;
         for (int j = 0; j < TAM_LINEA; j++)
             tbl[i].Data[j] = 0x23;
     }
-
-    for (int i = 0; i < size; i++) {
-        printf("ETQ : %X Data : ", tbl[i].ETQ);
-        for (int j = 0; j < TAM_LINEA; j++)
-            printf("%X ", tbl[i].Data[j]);
-        printf("\n");
-    }
 }
 
-// Convierte hexadecimal en un array dee binarios y la devuelve
-int *convertToBinary(char *line, int index) {
+// Al fina del programa vuelca los 128 bytes en CONTENTS_CACHE.bin
+void VolcarCACHE(T_CACHE_LINE *tbl) {
+}
+
+void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque) {
+    char hex[TAM_BUS / 4];
+    sprintf(hex, "%X", addr);
+
+    int *binario = convertToBinary(hex);
+    int etqArray[TAM_ETQ] = {binario[0], binario[1], binario[2], binario[3], binario[4]};
+    int bloqueArray[TAM_MARCO] = {binario[5], binario[6], binario[7]};
+    int palabraArray[TAM_PALABRA] = {binario[8], binario[9], binario[10], binario[11]};
+
+    *ETQ = binaryToDecimal(binario, TAM_ETQ);
+    *linea = binaryToDecimal(bloqueArray, TAM_MARCO);
+    *palabra = binaryToDecimal(palabraArray, TAM_PALABRA);
+}
+
+void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque) {
+    numfallos++;
+    globaltime += 10;
+
+    printf("RAM : %X\n", MRAM[256 * linea % NUM_LINEAS]);
+}
+
+int binaryToDecimal(int *binario, int size) {
+    int exp = 0, decimal = 0;
+
+    for (int i = 0; i < size; i++) {
+        exp = (size - 1) - i;
+        int valor = 1;
+        if (binario[i] == 1) {
+            while (exp != 0) {
+                valor *= 2;
+                exp--;
+            }
+            decimal += valor;
+        }
+    }
+    return decimal;
+}
+
+// Convierte hexadecimal en un array de binarios y la devuelve
+int *convertToBinary(char *line) {
     int *binario = (int *)malloc(sizeof(int) * 12);
 
     for (int i = 0; i < 3; i++) {
@@ -301,4 +345,4 @@ int *convertToBinary(char *line, int index) {
     return binario;
 }
 
-// Compartir con usuario github CarlosVU
+// Vasco de Melo - 2 INSO A
