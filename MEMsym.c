@@ -58,8 +58,8 @@ int main(int argc, char **argv) {
     if (file == NULL)
         return -1;
 
-    imprimeCache(tbl);
-    imprimeRAM(Simul_RAM);
+    // imprimeCache(tbl);
+    // imprimeRAM(Simul_RAM);
 
     /* *** MAIN LOOP - Mientras hay direcciones que leer *** */
     while (getline(&line, &len, file) != -1) {
@@ -71,9 +71,9 @@ int main(int argc, char **argv) {
 
         printf("Dirección : %X\n\n", addr);
 
-        printf("ETQ : %X\n", etq);
-        printf("Linea : %X\n", linea);
-        printf("Palabra : %X\n", palabra);
+        printf("ETQ : 0x%X - %d\n", etq, etq);
+        printf("Linea : 0x%X - %d\n", linea, linea);
+        printf("Palabra : 0x%X - %d\n", palabra, palabra);
 
         int indexLinea = bloque % NUM_LINEAS;  // Obtiene la línea en que buscar en la caché
 
@@ -81,9 +81,9 @@ int main(int argc, char **argv) {
         printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
 
         if (tbl[indexLinea].ETQ == etq)
-            printf("“T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X”\n", timer, etq, tbl[indexLinea].ETQ, bloque, palabra, 0);
+            printf("T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X\n", timer, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
         else {
-            printf("“T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X”,\n", timer, numfallos, addr, etq, linea, palabra, bloque);
+            printf("T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X,\n", timer, numfallos, addr, etq, linea, palabra, bloque);
             TratarFallo(tbl, Simul_RAM, etq, linea, bloque);
         }
 
@@ -106,14 +106,27 @@ int main(int argc, char **argv) {
 }
 
 void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque) {
-    char hex[TAM_BUS / 4];
+    char hex[TAM_BUS / 4];  // Cada numero hexadeciaml es un cuarteto binario
     sprintf(hex, "%X", addr);
 
     int *binario = convertToBinary(hex);
 
-    int etqArray[TAM_ETQ] = {binario[0], binario[1], binario[2], binario[3], binario[4]};
-    int lineaArray[TAM_MARCO] = {binario[5], binario[6], binario[7]};
-    int palabraArray[TAM_PALABRA] = {binario[8], binario[9], binario[10], binario[11]};
+    int etqArray[TAM_ETQ];          // La etiqueta son los primeros TAM_ETQ bits
+    int lineaArray[TAM_MARCO];      // La linea son los siguientes TAM_MACRO bits
+    int palabraArray[TAM_PALABRA];  // La palabra son los últimos TAM_PALABRA bits
+
+    for (int i = 0; i < TAM_BUS; i++) {
+        if (i < TAM_ETQ)
+            etqArray[i] = binario[i];
+        if (i >= TAM_ETQ && i < TAM_ETQ + TAM_MARCO)
+            lineaArray[i - TAM_ETQ] = binario[i];
+        if (i >= (TAM_ETQ + TAM_MARCO) && i < TAM_BUS)
+            palabraArray[i - (TAM_ETQ + TAM_MARCO)] = binario[i];
+    }
+
+    // int etqArray[TAM_ETQ] = {binario[0], binario[1], binario[2], binario[3], binario[4]};
+    // int lineaArray[TAM_MARCO] = {binario[5], binario[6], binario[7]};
+    // int palabraArray[TAM_PALABRA] = {binario[8], binario[9], binario[10], binario[11]};
 
     int bloqueArray[TAM_ETQ + TAM_MARCO] = {binario[0], binario[1], binario[2], binario[3], binario[4], binario[5], binario[6], binario[7]};
 
