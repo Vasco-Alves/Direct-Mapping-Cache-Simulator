@@ -2,16 +2,16 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define TAM_PALABRA 4  // w
-#define TAM_MARCO 3    // r
-#define TAM_ETQ 5      // ETQ
+#define TAM_PALABRA 4  // bits de palabra
+#define TAM_MARCO 3    // bits de marco de bloque
+#define TAM_ETQ 5      // bits de etiqueta
 
-#define TAM_LINEA 16
-#define TAM_BUS 12
-#define NUM_LINEAS 8
+#define TAM_LINEA 16  // bytes de linea/bloque
+#define TAM_BUS 12    // bits del bus
+#define NUM_LINEAS 8  // números de linea que tiene la caché
 
-#define TAM_RAM 4096   // 2^12
-#define TAM_CACHE 128  // 2^7
+#define TAM_RAM 4096   // bytes de RAM - 2^12 = 4 KB
+#define TAM_CACHE 128  // bytes de caché - 2^7 = 128 B
 
 typedef struct Cache {
     unsigned char ETQ;
@@ -34,7 +34,7 @@ int numfallos = 0;
 int main(int argc, char **argv) {
     int timer = 1;
     char texto[100];
-    FILE *file = NULL;
+    FILE *file;
 
     T_CACHE_LINE tbl[NUM_LINEAS];      // Memoria Caché
     unsigned char Simul_RAM[TAM_RAM];  // Memoria RAM
@@ -51,8 +51,7 @@ int main(int argc, char **argv) {
     fread(Simul_RAM, 1, sizeof(Simul_RAM), file);
     fclose(file);
 
-    /* *** LEE FICHERO "accesos_memoria.txt" *** */
-    // char line[100];
+    /* *** LEE FICHERO "accesos_memoria.txt" LINEA POR LINEA *** */
     char *line = NULL;
     size_t len = 0;
 
@@ -101,7 +100,7 @@ int main(int argc, char **argv) {
         sleep(1);
     }
 
-    /* *** TERMINA BUCLE *** */
+    /* *** FIN BUCLE *** */
     VolcarCACHE(tbl);
 
     printf("Accesos totales : %d; fallos : %d; Tiempo medio : %.2f\n", timer, numfallos, (double)globaltime / timer);
@@ -111,7 +110,7 @@ int main(int argc, char **argv) {
     }
 
     fclose(file);
-    // free(line);
+    free(line);
     printf("\n");
 
     return 0;
@@ -176,7 +175,7 @@ void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS]) {
     }
 }
 
-// Al fina del programa vuelca los 128 bytes en CONTENTS_CACHE.bin
+// Al fina del programa vuelca los 128 bytes en "CONTENTS_CACHE.bin"
 void VolcarCACHE(T_CACHE_LINE *tbl) {
     FILE *file = fopen("CONTENTS_CACHE.bin", "wb");
     if (!file) {
@@ -192,7 +191,7 @@ void VolcarCACHE(T_CACHE_LINE *tbl) {
     fclose(file);
 }
 
-// *** MIS FUNCIONES ***
+/* *** MIS FUNCIONES *** */
 // Imprime los contenidos de la cache
 void imprimeCache(T_CACHE_LINE *tbl) {
     printf("\n");
