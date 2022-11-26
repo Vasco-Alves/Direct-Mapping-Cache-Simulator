@@ -6,9 +6,9 @@
 #define TAM_MARCO 3    // bits de marco de bloque
 #define TAM_ETQ 5      // bits de etiqueta
 
-#define TAM_LINEA 16  // bytes de linea/bloque
-#define TAM_BUS 12    // bits del bus
-#define NUM_LINEAS 8  // números de linea que tiene la caché
+#define TAM_LINEA 16                                 // bytes de linea/bloque
+#define TAM_BUS (TAM_PALABRA + TAM_MARCO + TAM_ETQ)  // bits del bus
+#define NUM_LINEAS 8                                 // números de linea que tiene la caché
 
 #define TAM_RAM 4096   // bytes de RAM - 2^12 = 4 KB
 #define TAM_CACHE 128  // bytes de caché - 2^7 = 128 B
@@ -32,8 +32,8 @@ int globaltime = 0;
 int numfallos = 0;
 
 int main(int argc, char **argv) {
-    int timer = 1;
-    char texto[100];
+    int timer = 1, index = 0;
+    char texto[100];  // Acumula el texto leído por la CPU
     FILE *file;
 
     T_CACHE_LINE tbl[NUM_LINEAS];      // Memoria Caché
@@ -65,7 +65,6 @@ int main(int argc, char **argv) {
     // imprimeRAM(Simul_RAM);
 
     /* *** MAIN LOOP - Mientras hay direcciones que leer *** */
-    // while (fgets(line, sizeof(line), file)) {
     while (getline(&line, &len, file) != EOF) {
         unsigned int addr = 0;
         int etq = 0, linea = 0, palabra = 0, bloque = 0;
@@ -87,7 +86,7 @@ int main(int argc, char **argv) {
 
         if (tbl[indexLinea].ETQ == etq) {
             printf("T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X\n", timer, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
-            texto[timer - 1] = tbl[linea].Data[palabra];  // Añadimos el carácter leído al array texto
+            texto[index++] = tbl[linea].Data[palabra];  // Añadimos el carácter leído al array texto
         } else {
             printf("T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X\n", timer, numfallos, addr, etq, linea, palabra, bloque);
             TratarFallo(tbl, Simul_RAM, etq, linea, bloque);
@@ -104,14 +103,10 @@ int main(int argc, char **argv) {
     VolcarCACHE(tbl);
 
     printf("Accesos totales : %d; fallos : %d; Tiempo medio : %.2f\n", timer, numfallos, (double)globaltime / timer);
-    printf("Texto leído : ");
-    for (int i = 0; i < timer; i++) {
-        printf("%c", texto[i]);
-    }
+    printf("Texto leído : %s\n", texto);
 
     fclose(file);
     free(line);
-    printf("\n");
 
     return 0;
 }
@@ -163,7 +158,6 @@ void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque) 
 
     for (int i = 0; i < TAM_LINEA; i++)
         tbl[linea].Data[i] = MRAM[i + bloque * TAM_LINEA];
-
     tbl[linea].ETQ = ETQ;
 }
 
@@ -183,7 +177,7 @@ void VolcarCACHE(T_CACHE_LINE *tbl) {
         exit(0);
     }
     for (int i = 0; i < NUM_LINEAS; i++) {
-        fprintf(file, "%02X  ", tbl[i].ETQ);
+        fprintf(file, "Etiqueta : %02X  Datos : ", tbl[i].ETQ);
         for (int j = TAM_LINEA - 1; j >= 0; j--)  // Las palabras en la linea se imprimen de izquierda a derecha
             fprintf(file, "%X ", tbl[i].Data[j]);
         fprintf(file, "\n");
@@ -207,7 +201,6 @@ void imprimeCache(T_CACHE_LINE *tbl) {
 void imprimeRAM(char *MRAM) {
     for (int i = 0; i < TAM_RAM / TAM_LINEA; i++) {
         if (i % 8 == 0) printf("\n");
-
         printf("l : %02X    ", i);
         for (int j = 0; j < TAM_LINEA; j++)
             printf("%02X ", MRAM[j + i * TAM_LINEA]);
