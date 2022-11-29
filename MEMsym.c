@@ -47,7 +47,7 @@ int main(int argc, char **argv) {
     /* *** PRIMERO LEE FICHERO "CONTENTS_RAM.bin" *** */
     file = fopen(ficheroRam, "rb");
     if (!file) {
-        printf("ERROR - FALLO AL LEER FICHERO \"CONTENTS_RAM.bin\"\n");
+        printf("ERROR - FALLO AL LEER FICHERO \"%s\"\n", ficheroRam);
         return -1;
     }
     fread(Simul_RAM, 1, sizeof(Simul_RAM), file);
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 
     file = fopen(ficheroDirecciones, "r");
     if (file == NULL) {
-        printf("ERROR - FALLO AL LEER FICHERO \"accesos_memoria.txt\"\n");
+        printf("ERROR - FALLO AL LEER FICHERO \"%s\"\n", ficheroDirecciones);
         return -1;
     }
 
