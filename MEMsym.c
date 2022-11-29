@@ -66,8 +66,8 @@ int main(int argc, char **argv) {
     // imprimeCache(tbl);
     // imprimeRAM(Simul_RAM);
 
-    int timer = 1, index = 0;
-    char texto[100];  // Acumula el texto leído por la CPU
+    int numAccesos = 1, index = 0;
+    char texto[4096];  // Acumula el texto leído por la CPU
 
     /* *** MAIN LOOP - LEE EL FICHERO LINEA POR LINEA *** */
     while (getline(&line, &len, file) != EOF) {
@@ -84,30 +84,32 @@ int main(int argc, char **argv) {
         // printf("Palabra : 0x%X - %d\n", palabra, palabra);
         // printf("Bloque : 0x%X - %d\n", bloque, bloque);
 
-        int indexLinea = bloque % NUM_LINEAS_CACHE;  // Obtiene la linea en que buscar de la caché
+        int indexLinea = bloque % NUM_LINEAS_CACHE;  // Obtiene la linea a buscar de la caché
 
         // printf("\nBuscar en línea : %d\n", indexLinea);
         // printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
 
+        // Comprueba si la estiqueta de dirección es igual a la de la cache
         if (tbl[indexLinea].ETQ == etq) {
-            printf("T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X\n", timer, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
+            printf("T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X\n", numAccesos, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
             texto[index++] = tbl[linea].Data[palabra];  // Añadimos el carácter leído al array texto
+            globaltime++;
         } else {
-            printf("T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X\n", timer, numfallos, addr, etq, linea, palabra, bloque);
+            printf("T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X\n", numAccesos, numfallos, addr, etq, linea, palabra, bloque);
             TratarFallo(tbl, Simul_RAM, etq, linea, bloque);
         }
 
         // imprimeCache(tbl);
 
         printf("\n");
-        timer++;
+        numAccesos++;
         sleep(1);
     }
 
     /* *** FIN BUCLE - NO HAY MÁS DIRECCIONES QUE LEER *** */
     VolcarCACHE(tbl);
 
-    printf("Accesos totales : %d; fallos : %d; Tiempo medio : %.2f\n", timer, numfallos, (double)globaltime / numfallos);
+    printf("Accesos totales : %d; fallos : %d; Tiempo medio : %.2f\n", (numAccesos - 1), numfallos, (double)globaltime / (numAccesos - 1));
     printf("Texto leído : %s\n", texto);
 
     fclose(file);
