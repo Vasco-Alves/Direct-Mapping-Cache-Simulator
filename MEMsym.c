@@ -14,15 +14,16 @@
 
 #define NUM_LINEAS_CACHE (TAM_CACHE / TAM_LINEA)  // número de líneas que tiene la caché
 
+// Estructura Memoria Cache
 typedef struct Cache {
     unsigned char ETQ;
     unsigned char Data[TAM_LINEA];
 } T_CACHE_LINE;
 
-void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS_CACHE]);
-void VolcarCACHE(T_CACHE_LINE *tbl);
-void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque);
-void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque);
+void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS_CACHE]);                                      // Asigna valores iniciales a la Caché
+void VolcarCACHE(T_CACHE_LINE *tbl);                                                        // Muestra los conenidos de la Caché en un archivo
+void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque);  // Lee dirreciones y las traduce
+void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque);            // Si hay un miss de Caché, busca en la RAM
 
 int *convertToBinary(char *line);
 int binaryToDecimal(int *binario, int size);
@@ -96,7 +97,8 @@ int main(int argc, char **argv) {
             globaltime++;
         } else {
             printf("T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X\n", numAccesos, numfallos, addr, etq, linea, palabra, bloque);
-            TratarFallo(tbl, Simul_RAM, etq, linea, bloque);
+            TratarFallo(tbl, Simul_RAM, etq, linea, bloque);  // Copia el bloque necesario de RAM a Caché
+            texto[index++] = tbl[linea].Data[palabra];        // Añadimos el carácter leído al array texto
         }
 
         // imprimeCache(tbl);
