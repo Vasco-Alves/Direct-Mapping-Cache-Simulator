@@ -20,13 +20,11 @@ typedef struct Cache {
     unsigned char Data[TAM_LINEA];
 } T_CACHE_LINE;
 
-void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS_CACHE]);                                     // Asigna valores iniciales a la Caché
-void VolcarCACHE(T_CACHE_LINE *tbl);                                                       // Muestra los conenidos de la Caché en un archivo
-void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque); // Lee dirreciones y las traduce
-void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque);           // Si hay un miss de Caché, busca en la RAM
+void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS_CACHE]);                                     // Asigna valores iniciales a la caché
+void VolcarCACHE(T_CACHE_LINE *tbl);                                                       // Muestra los contenidos de la caché en un archivo
+void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque); // Lee dirreciones de memoria y las traduce
+void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque);           // Si hay un fallo de caché, busca en la RAM
 
-int *convertToBinary(char *line);
-int binaryToDecimal(int *binario, int size);
 void imprimeCache(T_CACHE_LINE *tbl);
 void imprimeRAM(char *MRAM);
 
@@ -64,9 +62,10 @@ int main(int argc, char **argv) {
         return -1;
     }
 
-    // imprimeCache(tbl);
-    // imprimeRAM(Simul_RAM);
-    // printf("\n");
+    imprimeCache(tbl);
+    printf("\n");
+    imprimeRAM(Simul_RAM);
+    printf("\n");
 
     int numAccesos = 1, index = 0;
     char texto[4096]; // Acumula el texto leído por la CPU
@@ -81,24 +80,20 @@ int main(int argc, char **argv) {
 
         ParsearDireccion(addr, &etq, &palabra, &linea, &bloque);
 
-        printf("ETQ : 0x%02X - %d\n", etq, etq);
-        printf("Linea : 0x%02X - %d\n", linea, linea);
-        printf("Palabra : 0x%02X - %d\n", palabra, palabra);
-        printf("Bloque : 0x%02X - %d\n", bloque, bloque);
-
         int indexLinea = bloque % NUM_LINEAS_CACHE; // Obtiene la linea a buscar de la caché
 
-        printf("\nBuscar en línea : %d\n", indexLinea);
-        printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
+        printf("Buscar en la línea %d de la caché\n", indexLinea);
+        printf("Linea %d caché : ETQ %02X\n\n", indexLinea, tbl[indexLinea].ETQ);
 
         // Comprueba si la etiqueta de dirección es igual a la de la cache
         if (tbl[indexLinea].ETQ == etq) {
-            printf("T: %d, Acierto de CACHE, ADDR %02X Label %02X linea %02X palabra %02X DATO %02X\n", numAccesos, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
+            printf("T: %d, Acierto de CACHE, ADDR %02X ETQ %02X linea %02X palabra %02X DATO %02X\n\n", numAccesos, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
             globaltime++;
 
         } else {
-            printf("T: %d, Fallo de CACHE %d, ADDR %02X Label %02X linea %02X palabra %02X bloque %02X\n", numAccesos, numfallos, addr, etq, linea, palabra, bloque);
+            printf("T: %d, Fallo de CACHE %d, ADDR %02X ETQ %02X linea %02X palabra %02X bloque %02X\n", numAccesos, ++numfallos, addr, etq, linea, palabra, bloque);
             TratarFallo(tbl, Simul_RAM, etq, linea, bloque); // Copia el bloque necesario de RAM a Caché
+            globaltime += 10;
         }
 
         texto[index++] = tbl[linea].Data[palabra]; // Añadimos el carácter leído al array texto
@@ -106,7 +101,7 @@ int main(int argc, char **argv) {
 
         printf("\n");
         numAccesos++;
-        // sleep(1);
+        sleep(1);
     }
 
     /* *** FIN BUCLE - NO HAY MÁS DIRECCIONES QUE LEER *** */
@@ -127,64 +122,16 @@ void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int
     *linea = addr & ((1 << TAM_MARCO) - 1);
     addr >>= TAM_MARCO;
     *ETQ = addr & ((1 << TAM_ETQ) - 1);
-    *bloque = (*ETQ << TAM_MARCO) | *linea;
-
-    /*
-    char hex[TAM_BUS / 4];    // Cada numero hexadeciaml es un cuarteto binario
-    sprintf(hex, "%X", addr); // Convierte int a char*
-
-    int *binario = convertToBinary(hex);
-
-    printf("Dirección en binario : ");
-    for (int i = 0; i < 12; i++) {
-        if (i % 4 == 3)
-            printf("%d ", binario[i]);
-        else
-            printf("%d", binario[i]);
-    }
-    printf("\n\n");
-
-    int etqArray[TAM_ETQ];         // La etiqueta son los primeros TAM_ETQ bits
-    int lineaArray[TAM_MARCO];     // La linea son los siguientes TAM_MACRO bits
-    int palabraArray[TAM_PALABRA]; // La palabra son los últimos TAM_PALABRA bits
-
-    int bloqueArray[TAM_ETQ + TAM_MARCO]; // Dirección de la RAM donde se encunetra el bloque
-
-    // Separa los bits del array binario en los arrays etiqueta, linea y palabra
-    for (int i = 0; i < TAM_BUS; i++) {
-        if (i < TAM_ETQ) {
-            bloqueArray[i] = binario[i];
-            etqArray[i] = binario[i];
-        }
-        if (i >= TAM_ETQ && i < TAM_ETQ + TAM_MARCO) {
-            bloqueArray[i] = binario[i];
-            lineaArray[i - TAM_ETQ] = binario[i];
-        }
-        if (i >= (TAM_ETQ + TAM_MARCO) && i < TAM_BUS)
-            palabraArray[i - (TAM_ETQ + TAM_MARCO)] = binario[i];
-    }
-
-    // Calcula el valor decimal de los arrays de bits
-    *ETQ = binaryToDecimal(etqArray, TAM_ETQ);
-    *linea = binaryToDecimal(lineaArray, TAM_MARCO);
-    *palabra = binaryToDecimal(palabraArray, TAM_PALABRA);
-
-    *bloque = binaryToDecimal(bloqueArray, TAM_ETQ + TAM_MARCO);
-
-    free(binario);
-    */
+    *bloque = (*ETQ << TAM_MARCO) | *linea; // block = label size + frame size -> increases size to fit frame and adds it
 }
 
 void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque) {
-    numfallos++;
-    globaltime += 10;
-
-    printf("Bloque %X de RAM a copiar : ", bloque);
+    printf("Bloque %02X a copiar : ", bloque);
     for (int i = 0; i < TAM_LINEA; i++) {
         printf("%X ", MRAM[i + bloque * TAM_LINEA]);
     }
     printf("\n");
-    printf("Cargando el bloque %X en la linea %X\n", bloque, linea);
+    printf("Cargando el bloque %02X en la linea %d de la caché\n\n", bloque, linea);
 
     for (int i = 0; i < TAM_LINEA; i++)
         tbl[linea].Data[i] = MRAM[i + bloque * TAM_LINEA];
@@ -207,7 +154,7 @@ void VolcarCACHE(T_CACHE_LINE *tbl) {
         exit(0);
     }
     for (int i = 0; i < NUM_LINEAS_CACHE; i++) {
-        fprintf(file, "Etiqueta : %02X  Datos : ", tbl[i].ETQ);
+        fprintf(file, "ETQ : %02X  -  Datos : ", tbl[i].ETQ);
         for (int j = TAM_LINEA - 1; j >= 0; j--) // Las palabras en la linea se imprimen de izquierda a derecha
             fprintf(file, "%X ", tbl[i].Data[j]);
         fprintf(file, "\n");
@@ -216,210 +163,23 @@ void VolcarCACHE(T_CACHE_LINE *tbl) {
 }
 
 void imprimeCache(T_CACHE_LINE *tbl) {
-    printf("\nCACHE\n\n");
+    printf("********************************** CACHE **********************************\n");
     for (int i = 0; i < NUM_LINEAS_CACHE; i++) {
-        printf("Label : %02X    Data : ", tbl[i].ETQ);
+        printf("%3d -> ETQ : %02X  -  Datos : ", i, tbl[i].ETQ);
         for (int j = TAM_LINEA - 1; j >= 0; j--) // Las palabras en la linea se imprimen de izquierda a derecha
-            printf("%X ", tbl[i].Data[j]);
+            printf("%02X ", tbl[i].Data[j]);
         printf("\n");
     }
 }
 
 void imprimeRAM(char *MRAM) {
-    printf("\nRAM\n");
+    printf("*********************************** RAM ***********************************");
     for (int i = 0; i < TAM_RAM / TAM_LINEA; i++) {
         if (i % 8 == 0)
             printf("\n");
-        printf("Label : %02X    Data : ", i);
+        printf("%3d -> BLQ : %02X  -  Datos : ", i, i);
         for (int j = 0; j < TAM_LINEA; j++)
             printf("%02X ", MRAM[j + i * TAM_LINEA]);
         printf("\n");
     }
 }
-
-/*
-int binaryToDecimal(int *binario, int size) {
-    int exp = 0, decimal = 0;
-
-    for (int i = 0; i < size; i++) {
-        exp = (size - 1) - i;
-        int valor = 1;
-        if (binario[i] == 1) {
-            while (exp != 0) {
-                valor *= 2;
-                exp--;
-            }
-            decimal += valor;
-        }
-    }
-    return decimal;
-}
-
-int *convertToBinary(char *line) {
-    int *binario = (int *)malloc(sizeof(int) * 12);
-
-    for (int i = 0; i < 3; i++) {
-        switch (line[i]) {
-            case '0':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case '1':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case '2':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case '3':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case '4':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case '5':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case '6':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case '7':
-                binario[0 + 4 * i] = 0;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case '8':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case '9':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case 'A':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case 'B':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case 'C':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case 'D':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case 'E':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case 'F':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case 'a':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case 'b':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 0;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case 'c':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case 'd':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 0;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            case 'e':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 0;
-                break;
-
-            case 'f':
-                binario[0 + 4 * i] = 1;
-                binario[1 + 4 * i] = 1;
-                binario[2 + 4 * i] = 1;
-                binario[3 + 4 * i] = 1;
-                break;
-
-            default:
-                break;
-        }
-    }
-    return binario;
-}
-*/
-
-// Vasco de Melo - 2 INSO A
