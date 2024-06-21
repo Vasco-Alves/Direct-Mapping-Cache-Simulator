@@ -1,8 +1,6 @@
-# Simulador Memoria Cache MEGATRONIX
+# Simulator of direct mapping of cache memory
 
-CPU de 12 bits  
-tam RAM = 4 KB  
-tam CACHE = 128 B  
-tam bloque = 16 B  
-
-Vasco de Melo - 2 INSO A
+12 bits CPU
+RAM = 4 KB  
+CACHE = 128 B  
+RAM block = 16 B  
