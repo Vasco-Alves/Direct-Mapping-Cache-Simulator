@@ -2,17 +2,17 @@
 #include <stdlib.h>
 #include <unistd.h>
 
-#define TAM_RAM 4096   // bytes de RAM - 2^12 = 4 KB
-#define TAM_CACHE 128  // bytes de caché - 2^7 = 128 B
+#define TAM_RAM 4096  // bytes de RAM - 2^12 = 4 KB
+#define TAM_CACHE 128 // bytes de caché - 2^7 = 128 B
 
-#define TAM_PALABRA 4  // bits de palabra
-#define TAM_MARCO 3    // bits de marco de bloque
-#define TAM_ETQ 5      // bits de etiqueta
+#define TAM_PALABRA 4 // bits de palabra
+#define TAM_MARCO 3   // bits de marco de bloque
+#define TAM_ETQ 5     // bits de etiqueta
 
-#define TAM_LINEA 16                                 // bytes de linea/bloque
-#define TAM_BUS (TAM_PALABRA + TAM_MARCO + TAM_ETQ)  // bits del bus
+#define TAM_LINEA 16                                // bytes de linea/bloque
+#define TAM_BUS (TAM_PALABRA + TAM_MARCO + TAM_ETQ) // bits del bus
 
-#define NUM_LINEAS_CACHE (TAM_CACHE / TAM_LINEA)  // número de líneas que tiene la caché
+#define NUM_LINEAS_CACHE (TAM_CACHE / TAM_LINEA) // número de líneas que tiene la caché
 
 // Estructura Memoria Cache
 typedef struct Cache {
@@ -20,10 +20,10 @@ typedef struct Cache {
     unsigned char Data[TAM_LINEA];
 } T_CACHE_LINE;
 
-void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS_CACHE]);                                      // Asigna valores iniciales a la Caché
-void VolcarCACHE(T_CACHE_LINE *tbl);                                                        // Muestra los conenidos de la Caché en un archivo
-void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque);  // Lee dirreciones y las traduce
-void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque);            // Si hay un miss de Caché, busca en la RAM
+void LimpiarCACHE(T_CACHE_LINE tbl[NUM_LINEAS_CACHE]);                                     // Asigna valores iniciales a la Caché
+void VolcarCACHE(T_CACHE_LINE *tbl);                                                       // Muestra los conenidos de la Caché en un archivo
+void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque); // Lee dirreciones y las traduce
+void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque);           // Si hay un miss de Caché, busca en la RAM
 
 int *convertToBinary(char *line);
 int binaryToDecimal(int *binario, int size);
@@ -39,11 +39,11 @@ int main(int argc, char **argv) {
 
     FILE *file;
 
-    T_CACHE_LINE tbl[NUM_LINEAS_CACHE];  // Memoria Caché
-    unsigned char Simul_RAM[TAM_RAM];    // Memoria RAM
+    T_CACHE_LINE tbl[NUM_LINEAS_CACHE]; // Memoria Caché
+    unsigned char Simul_RAM[TAM_RAM];   // Memoria RAM
 
     /*  *** EMPIEZA EL PROCESO *** */
-    LimpiarCACHE(tbl);  // Da un valor incial a cada campo de la caché
+    LimpiarCACHE(tbl); // Da un valor incial a cada campo de la caché
 
     /* *** PRIMERO LEE FICHERO "CONTENTS_RAM.bin" *** */
     file = fopen(ficheroRam, "rb");
@@ -59,53 +59,54 @@ int main(int argc, char **argv) {
     size_t len = 0;
 
     file = fopen(ficheroDirecciones, "r");
-    if (file == NULL) {
+    if (!file) {
         printf("ERROR - FALLO AL LEER FICHERO \"%s\"\n", ficheroDirecciones);
         return -1;
     }
 
     // imprimeCache(tbl);
     // imprimeRAM(Simul_RAM);
+    // printf("\n");
 
     int numAccesos = 1, index = 0;
-    char texto[4096];  // Acumula el texto leído por la CPU
+    char texto[4096]; // Acumula el texto leído por la CPU
 
     /* *** MAIN LOOP - LEE EL FICHERO LINEA POR LINEA *** */
     while (getline(&line, &len, file) != EOF) {
         unsigned int addr = 0;
         int etq = 0, linea = 0, palabra = 0, bloque = 0;
 
-        sscanf(line, "%x", &addr);  // Convierte char* a int
+        sscanf(line, "%x", &addr); // Convierte char* a int
+        printf("\n--------- Dirección a leer : %02X ---------\n\n", addr);
+
         ParsearDireccion(addr, &etq, &palabra, &linea, &bloque);
 
-        // printf("Dirección : %X\n\n", addr);
+        printf("ETQ : 0x%02X - %d\n", etq, etq);
+        printf("Linea : 0x%02X - %d\n", linea, linea);
+        printf("Palabra : 0x%02X - %d\n", palabra, palabra);
+        printf("Bloque : 0x%02X - %d\n", bloque, bloque);
 
-        // printf("ETQ : 0x%X - %d\n", etq, etq);
-        // printf("Linea : 0x%X - %d\n", linea, linea);
-        // printf("Palabra : 0x%X - %d\n", palabra, palabra);
-        // printf("Bloque : 0x%X - %d\n", bloque, bloque);
+        int indexLinea = bloque % NUM_LINEAS_CACHE; // Obtiene la linea a buscar de la caché
 
-        int indexLinea = bloque % NUM_LINEAS_CACHE;  // Obtiene la linea a buscar de la caché
+        printf("\nBuscar en línea : %d\n", indexLinea);
+        printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
 
-        // printf("\nBuscar en línea : %d\n", indexLinea);
-        // printf("Linea %d caché : 0x%X ETQ\n\n", indexLinea, tbl[indexLinea].ETQ);
-
-        // Comprueba si la estiqueta de dirección es igual a la de la cache
+        // Comprueba si la etiqueta de dirección es igual a la de la cache
         if (tbl[indexLinea].ETQ == etq) {
-            printf("T: %d, Acierto de CACHE, ADDR %04X Label %X linea %02X palabra %02X DATO %02X\n", numAccesos, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
-            texto[index++] = tbl[linea].Data[palabra];  // Añadimos el carácter leído al array texto
+            printf("T: %d, Acierto de CACHE, ADDR %02X Label %02X linea %02X palabra %02X DATO %02X\n", numAccesos, addr, etq, linea, palabra, tbl[linea].Data[palabra]);
             globaltime++;
+
         } else {
-            printf("T: %d, Fallo de CACHE %d, ADDR %04X Label %X linea %02X palabra %02X bloque %02X\n", numAccesos, numfallos, addr, etq, linea, palabra, bloque);
-            TratarFallo(tbl, Simul_RAM, etq, linea, bloque);  // Copia el bloque necesario de RAM a Caché
-            texto[index++] = tbl[linea].Data[palabra];        // Añadimos el carácter leído al array texto
+            printf("T: %d, Fallo de CACHE %d, ADDR %02X Label %02X linea %02X palabra %02X bloque %02X\n", numAccesos, numfallos, addr, etq, linea, palabra, bloque);
+            TratarFallo(tbl, Simul_RAM, etq, linea, bloque); // Copia el bloque necesario de RAM a Caché
         }
 
-        // imprimeCache(tbl);
+        texto[index++] = tbl[linea].Data[palabra]; // Añadimos el carácter leído al array texto
+        imprimeCache(tbl);
 
         printf("\n");
         numAccesos++;
-        sleep(1);
+        // sleep(1);
     }
 
     /* *** FIN BUCLE - NO HAY MÁS DIRECCIONES QUE LEER *** */
@@ -121,16 +122,33 @@ int main(int argc, char **argv) {
 }
 
 void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int *bloque) {
-    char hex[TAM_BUS / 4];     // Cada numero hexadeciaml es un cuarteto binario
-    sprintf(hex, "%X", addr);  // Convierte int a char*
+    *palabra = addr & ((1 << TAM_PALABRA) - 1);
+    addr >>= TAM_PALABRA;
+    *linea = addr & ((1 << TAM_MARCO) - 1);
+    addr >>= TAM_MARCO;
+    *ETQ = addr & ((1 << TAM_ETQ) - 1);
+    *bloque = (*ETQ << TAM_MARCO) | *linea;
+
+    /*
+    char hex[TAM_BUS / 4];    // Cada numero hexadeciaml es un cuarteto binario
+    sprintf(hex, "%X", addr); // Convierte int a char*
 
     int *binario = convertToBinary(hex);
 
-    int etqArray[TAM_ETQ];          // La etiqueta son los primeros TAM_ETQ bits
-    int lineaArray[TAM_MARCO];      // La linea son los siguientes TAM_MACRO bits
-    int palabraArray[TAM_PALABRA];  // La palabra son los últimos TAM_PALABRA bits
+    printf("Dirección en binario : ");
+    for (int i = 0; i < 12; i++) {
+        if (i % 4 == 3)
+            printf("%d ", binario[i]);
+        else
+            printf("%d", binario[i]);
+    }
+    printf("\n\n");
 
-    int bloqueArray[TAM_ETQ + TAM_MARCO];  // Dirección de la RAM donde se encunetra el bloque
+    int etqArray[TAM_ETQ];         // La etiqueta son los primeros TAM_ETQ bits
+    int lineaArray[TAM_MARCO];     // La linea son los siguientes TAM_MACRO bits
+    int palabraArray[TAM_PALABRA]; // La palabra son los últimos TAM_PALABRA bits
+
+    int bloqueArray[TAM_ETQ + TAM_MARCO]; // Dirección de la RAM donde se encunetra el bloque
 
     // Separa los bits del array binario en los arrays etiqueta, linea y palabra
     for (int i = 0; i < TAM_BUS; i++) {
@@ -154,17 +172,18 @@ void ParsearDireccion(unsigned int addr, int *ETQ, int *palabra, int *linea, int
     *bloque = binaryToDecimal(bloqueArray, TAM_ETQ + TAM_MARCO);
 
     free(binario);
+    */
 }
 
 void TratarFallo(T_CACHE_LINE *tbl, char *MRAM, int ETQ, int linea, int bloque) {
     numfallos++;
     globaltime += 10;
 
-    // printf("Bloque %X de RAM a copiar : ", bloque);
-    // for (int i = 0; i < TAM_LINEA; i++) {
-    //     printf("%X ", MRAM[i + bloque * TAM_LINEA]);
-    // }
-    // printf("\n");
+    printf("Bloque %X de RAM a copiar : ", bloque);
+    for (int i = 0; i < TAM_LINEA; i++) {
+        printf("%X ", MRAM[i + bloque * TAM_LINEA]);
+    }
+    printf("\n");
     printf("Cargando el bloque %X en la linea %X\n", bloque, linea);
 
     for (int i = 0; i < TAM_LINEA; i++)
@@ -189,37 +208,36 @@ void VolcarCACHE(T_CACHE_LINE *tbl) {
     }
     for (int i = 0; i < NUM_LINEAS_CACHE; i++) {
         fprintf(file, "Etiqueta : %02X  Datos : ", tbl[i].ETQ);
-        for (int j = TAM_LINEA - 1; j >= 0; j--)  // Las palabras en la linea se imprimen de izquierda a derecha
+        for (int j = TAM_LINEA - 1; j >= 0; j--) // Las palabras en la linea se imprimen de izquierda a derecha
             fprintf(file, "%X ", tbl[i].Data[j]);
         fprintf(file, "\n");
     }
     fclose(file);
 }
 
-/* *** MIS FUNCIONES *** */
-// Imprime los contenidos de la cache
 void imprimeCache(T_CACHE_LINE *tbl) {
-    printf("\n");
+    printf("\nCACHE\n\n");
     for (int i = 0; i < NUM_LINEAS_CACHE; i++) {
-        printf("l : %d  %02X  ", i, tbl[i].ETQ);
-        for (int j = TAM_LINEA - 1; j >= 0; j--)  // Las palabras en la linea se imprimen de izquierda a derecha
+        printf("Label : %02X    Data : ", tbl[i].ETQ);
+        for (int j = TAM_LINEA - 1; j >= 0; j--) // Las palabras en la linea se imprimen de izquierda a derecha
             printf("%X ", tbl[i].Data[j]);
         printf("\n");
     }
 }
 
-// Imprime los contenidos de la RAM
 void imprimeRAM(char *MRAM) {
+    printf("\nRAM\n");
     for (int i = 0; i < TAM_RAM / TAM_LINEA; i++) {
-        if (i % 8 == 0) printf("\n");
-        printf("l : %02X    ", i);
+        if (i % 8 == 0)
+            printf("\n");
+        printf("Label : %02X    Data : ", i);
         for (int j = 0; j < TAM_LINEA; j++)
             printf("%02X ", MRAM[j + i * TAM_LINEA]);
         printf("\n");
     }
 }
 
-// Convierte de binario a decimal
+/*
 int binaryToDecimal(int *binario, int size) {
     int exp = 0, decimal = 0;
 
@@ -237,7 +255,6 @@ int binaryToDecimal(int *binario, int size) {
     return decimal;
 }
 
-// Convierte hexadecimal en un array de binarios y la devuelve
 int *convertToBinary(char *line) {
     int *binario = (int *)malloc(sizeof(int) * 12);
 
@@ -403,5 +420,6 @@ int *convertToBinary(char *line) {
     }
     return binario;
 }
+*/
 
 // Vasco de Melo - 2 INSO A
